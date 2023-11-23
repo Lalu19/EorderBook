@@ -1,0 +1,211 @@
+﻿@using Microsoft.Extensions.Configuration;
+@using Microsoft.AspNetCore.Http
+@inject IConfiguration Configuration;
+
+@{
+    ViewBag.Title = "Category";
+    string apiUrl = Configuration.GetValue<string>("WebAPIBaseUrl");
+}
+
+<!-- PAGE-HEADER -->
+<div class="page-header">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="#"><i class="fe fe-file-text mr-1"></i>Admin Consol</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Category Edit</li>
+    </ol>
+    <div class="ml-auto">
+        <a href="~/Category/CategoryList" class="btn btn-primary btn-icon btn-sm text-white mr-2">
+            <span>
+                <i class="fe fe-plus"></i>
+            </span> View
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md">
+        <div class="card overflow-hidden">
+            <div class="card-header">
+                <h3 class="card-title">Category Edit</h3>
+            </div>
+            <div class="card-body">
+                <form action="#" role="form" class="validate" id="formPost">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Brand  &nbsp;<span style="color: red;"><b>*</b></span></label>
+                                <div class="input-box">
+                                    <select class="form-control" id="selectBrand">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Category  &nbsp;<span style="color: red;"><b>*</b></span></label>
+                                <input type="text" class="form-control" id="categoryname" placeholder="Enter Category Name" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="button" id="btnupdate" class="btn btn-radius btn-success">Update</button>
+                            <a type="button" href="~/Category/CategoryList" class="btn btn-radius btn-danger">Reset</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+
+        Getbeat()
+        async function Getbeat(Id) {
+            var opt = '';
+            $.ajax({
+                type: "GET",
+                url: "@apiUrl/api/Brand/GetBrandListbyUserId/" + @Context.Session.GetInt32("UserId"),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (res) {
+                    var options = [];
+                    options.push(' <option value = ""> Select brand </option> ');
+                    for (var i = 0; i < res.data.length; i++) {
+                        if (Id == res.data[i].brandId) {
+                            opt = 'selected'
+                        } else {
+                            opt = '';
+                        }
+                        options.push('<option value = "' + res.data[i].brandId + '" ' + opt + ' > ' + res.data[i].brandName + '</option>');
+                    }
+                    $("#selectBrand").html(options.join(''));
+                },
+
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.replace('/Message/TokenExpire');
+                    } else if (data.status == 403) {
+                        window.location.replace('/Message/Unauthorize');
+                    }
+                }
+            });
+        }
+
+        var categoryId = @ViewBag.categoryId
+            loadSingleBeat()
+        function loadSingleBeat() {
+            $.ajax({
+                type: "GET",
+                url: "@apiUrl/api/Category/GetSingleCategory/" + categoryId,
+                contentType: "application/json; charset=utf-8",
+                headers: {
+                    "authorization": "Bearer @Context.Session.GetString("TokenTxt")"
+                },
+                dataType: "json",
+                success: function (data) {
+                    if (data) {
+                        $('#selectBrand').val(data.categoryId);
+                        $('#categoryname').val(data.categoryName);
+
+                    }
+                    else {
+                        sweetAlert("Validation Alert!", "Something unexpected!", "warning");
+                    }
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.replace('/Message/TokenExpire');
+                    } else if (data.status == 403) {
+                        window.location.replace('/Message/Unauthorize');
+                    }
+                }
+            });
+        }
+
+
+        $("#btnupdate").click(function (e) {
+            if (!document.getElementById("formPost").checkValidity()) {
+                e.preventDefault();
+            } else {
+
+                var model = {
+                    categoryId: categoryId,
+                    brandId: $.trim($("#selectBrand").val()),
+                    categoryName: $.trim($("#categoryname").val()),
+                    updatedBy: @Context.Session.GetInt32("UserId"),
+                }
+                console.log(model)
+                $.ajax({
+                    type: "POST",
+                    url: "@apiUrl/api/Category/updateCategory",
+                    data: JSON.stringify(model),
+                    contentType: "application/json; charset=utf-8",
+                    headers: {
+                        "authorization": "Bearer @Context.Session.GetString("TokenTxt")"
+                    },
+
+                    success: function (data, statusText, xhr) {
+                        console.log(data)
+                        if (xhr.status === 200) {
+                            $('#Category_Tb').DataTable().ajax.reload(null, false);
+                            sweetAlert({
+                                html: true,
+                                icon: "success",
+                                title: "Category",
+                                text: "Successfully updated!",
+                                type: "success"
+                            });
+                        } else if (data.status === "duplicate") {
+                            sweetAlert("Validation Alert!", data.responseMsg, "warning");
+                        } else if (data.status === "error") {
+                            sweetAlert("Validation Alert!", data.responseMsg, "warning");
+                        } else {
+                            sweetAlert("Validation Alert!", "Something unexpected!", "warning");
+                        }
+                    },
+                    error: function (data) {
+                        console.log(data);
+                        if (data.status == 401) {
+                            window.location.replace('/Message/TokenExpire');
+                        } else if (data.status == 403) {
+                            window.location.replace('/Message/Unauthorize');
+                        } else if (data.status == 400) {
+                            sweetAlert("Validation Alert!", "Please check input data!", "warning");
+                        }
+                    }
+                });
+            }
+        });
+
+        function uploadFile() {
+            var totalFiles = document.getElementById('storeimg').files.length;
+            if (totalFiles > 0) {
+                var formData = new FormData();
+                var files = document.getElementById('storeimg').files;
+                formData.append("file", files[0]);
+                $.ajax(
+                    {
+                        url: "/Upload/ImgUpload",
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        async: false,
+                        type: "POST",
+                        success: function (data) {
+                            imgPath = data;
+
+                        },
+                        error: function (data) {
+                            window.location.replace('/Message/SessionExpire');
+                        }
+                    }
+                );
+            }
+
+        }
+    </script>
+}

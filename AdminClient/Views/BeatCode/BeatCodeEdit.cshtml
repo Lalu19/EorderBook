@@ -1,0 +1,254 @@
+﻿@using Microsoft.Extensions.Configuration;
+@using Microsoft.AspNetCore.Http
+@inject IConfiguration Configuration;
+
+@{
+    ViewBag.Title = "BeatCode";
+    string apiUrl = Configuration.GetValue<string>("WebAPIBaseUrl");
+}
+<!-- PAGE-HEADER -->
+<div class="page-header">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="#"><i class="fe fe-file-text mr-1"></i>Admin Consol</a></li>
+        <li class="breadcrumb-item active" aria-current="page">BeatCode Edit</li>
+    </ol>
+    <div class="ml-auto">
+        <a href="~/BeatCode/BeatCodeList" class="btn btn-primary btn-icon btn-sm text-white mr-2">
+            <span>
+                <i class="fe fe-plus"></i>
+            </span> View
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md">
+        <div class="card overflow-hidden">
+            <div class="card-header">
+                <h3 class="card-title">BeatCode Edit</h3>
+            </div>
+            <div class="card-body">
+                <form action="#" role="form" class="validate" id="formPost">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Area Name &nbsp;<span style="color: red;"><b>*</b></span></label>
+                                <div class="input-box">
+                                    <select class="form-control" id="Selectarea">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Beat Name &nbsp;<span style="color: red;"><b>*</b></span></label>
+                                <div class="input-box">
+                                    <select class="form-control" id="Selectbeat">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">BeatCode Name &nbsp;<span style="color: red;"><b>*</b></span></label>
+                                <input type="text" class="form-control" id="beatcodename" placeholder="Beat Code Name" required>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="button" id="btnupdate" class="btn btn-radius btn-success">Update</button>
+                            <a type="button" href="~/BeatCode/BeatCodeList" class="btn btn-radius btn-danger">Reset</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+
+        GetArea()
+        async function GetArea(Id) {
+            var opt = '';
+            $.ajax({
+                type: "POST",
+                url: "@apiUrl​/api/Area/GetAreaList",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (res) {
+                    var options = [];
+                    options.push('<option value = "" > Select Area </option>');
+                    for (var i = 0; i < res.data.length; i++) {
+                        if (Id == res.data[i].areaId) {
+                            opt = 'selected'
+                        } else {
+                            opt = '';
+                        }
+                        options.push('<option value = "' + res.data[i].areaId + '" ' + opt + ' > ' + res.data[i].areaName + '</option>');
+                    }
+                    $("#Selectarea").html(options.join(''));
+                },
+
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.replace('/Message/TokenExpire');
+                    } else if (data.status == 403) {
+                        window.location.replace('/Message/Unauthorize');
+                    }
+                }
+            });
+        }
+
+        GetBeat()
+        async function GetBeat(Id) {
+            var opt = '';
+            $.ajax({
+                type: "POST",
+                url: "@apiUrl​/api/Beat/GetBeatList",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (res) {
+                    var options = [];
+                    options.push('<option value = "" > Select Beat </option>');
+                    for (var i = 0; i < res.data.length; i++) {
+                        if (Id == res.data[i].beatId) {
+                            opt = 'selected'
+                        } else {
+                            opt = '';
+                        }
+                        options.push('<option value = "' + res.data[i].beatId + '" ' + opt + ' > ' + res.data[i].beatName + '</option>');
+                    }
+                    $("#Selectbeat").html(options.join(''));
+                },
+
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.replace('/Message/TokenExpire');
+                    } else if (data.status == 403) {
+                        window.location.replace('/Message/Unauthorize');
+                    }
+                }
+            });
+        }
+
+        $("#Selectarea").change(async function () {
+            var areaId = $("#Selectarea").val()
+            var opt = '';
+            $.ajax({
+                type: "POST",
+                url: '@apiUrl/api/Beat/GetBeatListbyareaid/' + areaId,
+                dataType: "json",
+                success: function (data) {
+                    var options = [];
+                    options.push('<option value="">Select Beat </option>');
+                    console.log(data)
+                    for (var i = 0; i < data['data'].length; i++) {
+                        options.push('<option value="' + data['data'][i].beatId + '" ' + opt + '>' + data['data'][i].beatName + '</option>');
+                    }
+                    $("#Selectbeat").html(options.join(''));
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.replace('/Message/TokenExpire');
+                    } else if (data.status == 403) {
+                        window.location.replace('/Message/Unauthorize');
+                    }
+                }
+
+            });
+
+        });
+        var beatCoadId = @ViewBag.beatCoadId
+            loadSingleBeatcode()
+        function loadSingleBeatcode() {
+            $.ajax({
+                type: "GET",
+                url: "@apiUrl/api/BeatCode/GetSingleBeatCode/" + beatCoadId,
+                contentType: "application/json; charset=utf-8",
+                headers: {
+                    "authorization": "Bearer @Context.Session.GetString("TokenTxt")"
+                },
+                dataType: "json",
+                success: function (data) {
+                    if (data) {
+                        $('#Selectarea').val(data.areaId);
+                        $('#Selectbeat').val(data.beatId);
+                        $('#beatcodename').val(data.beatCodeName);
+
+                    }
+                    else {
+                        sweetAlert("Validation Alert!", "Something unexpected!", "warning");
+                    }
+                },
+                error: function (data) {
+                    if (data.status == 401) {
+                        window.location.replace('/Message/TokenExpire');
+                    } else if (data.status == 403) {
+                        window.location.replace('/Message/Unauthorize');
+                    }
+                }
+            });
+        }
+
+
+        $("#btnupdate").click(function (e) {
+            if (!document.getElementById("formPost").checkValidity()) {
+                e.preventDefault();
+            } else {
+
+                var model = {
+                    beatCoadId: beatCoadId,
+                    areaId: $.trim($("#Selectarea").val()),
+                    beatId: $.trim($("#Selectbeat").val()),
+                    beatCodeName: $.trim($("#beatcodename").val()),
+                    updatedBy: @Context.Session.GetInt32("UserId"),
+                }
+                console.log(model)
+                $.ajax({
+                    type: "POST",
+                    url: "@apiUrl/api/BeatCode/updateBeatCode",
+                    data: JSON.stringify(model),
+                    contentType: "application/json; charset=utf-8",
+                    headers: {
+                        "authorization": "Bearer @Context.Session.GetString("TokenTxt")"
+                    },
+
+                    success: function (data, statusText, xhr) {
+                        console.log(data)
+                        if (xhr.status === 200) {
+                            $('#Beatcode_Tb').DataTable().ajax.reload(null, false);
+                            sweetAlert({
+                                html: true,
+                                icon: "success",
+                                title: "BeatCode",
+                                text: "Successfully updated!",
+                                type: "success"
+                            });
+                        } else if (data.status === "duplicate") {
+                            sweetAlert("Validation Alert!", data.responseMsg, "warning");
+                        } else if (data.status === "error") {
+                            sweetAlert("Validation Alert!", data.responseMsg, "warning");
+                        } else {
+                            sweetAlert("Validation Alert!", "Something unexpected!", "warning");
+                        }
+                    },
+                    error: function (data) {
+                        console.log(data);
+                        if (data.status == 401) {
+                            window.location.replace('/Message/TokenExpire');
+                        } else if (data.status == 403) {
+                            window.location.replace('/Message/Unauthorize');
+                        } else if (data.status == 400) {
+                            sweetAlert("Validation Alert!", "Please check input data!", "warning");
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}
